@@ -3,11 +3,12 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import { useLists } from "./hooks/useLists";
 import { useTodos } from "./hooks/useTodos";
+import { useSettings } from "./hooks/useSettings";
 import { Sidebar } from "./components/Sidebar";
 import { TodoList } from "./components/TodoList";
 import { LoginScreen } from "./components/LoginScreen";
 import { SettingsPanel } from "./components/SettingsPanel";
-import { notify } from "./lib/platform";
+import { notify, checkForUpdates } from "./lib/platform";
 import "./App.css";
 
 function App() {
@@ -15,6 +16,10 @@ function App() {
   const [sessionLoading, setSessionLoading] = useState(true);
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    checkForUpdates();
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -31,6 +36,7 @@ function App() {
 
   const { lists, addList, renameList, deleteList } = useLists();
   const { todos, addTodo, toggleTodo } = useTodos(activeListId);
+  const { settings, setMainFolderPath } = useSettings();
 
   useEffect(() => {
     if (!activeListId && lists.length > 0) {
@@ -83,7 +89,7 @@ function App() {
           listTitle={activeList.title}
           todos={todos}
           onToggle={toggleTodo}
-          onAdd={addTodo}
+          onAdd={(content) => addTodo(content, activeList.folder_path)}
         />
       ) : (
         <main className="content">
@@ -94,12 +100,16 @@ function App() {
       {settingsOpen && (
         <SettingsPanel
           lists={lists}
+          settings={settings}
           onRenameList={renameList}
           onDeleteList={(id) => {
             deleteList(id);
             if (id === activeListId) setActiveListId(null);
           }}
-          onCreateList={addList}
+          onSetMainFolderPath={setMainFolderPath}
+          onCreateList={(title, mailLoopName) =>
+            addList(title, mailLoopName, settings?.main_folder_path ?? null)
+          }
           onClose={() => setSettingsOpen(false)}
         />
       )}

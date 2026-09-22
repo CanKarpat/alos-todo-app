@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import type { List } from "../lib/types";
+import { createSubfolder } from "../lib/folders";
 
 export function useLists() {
   const [lists, setLists] = useState<List[]>([]);
@@ -41,29 +42,25 @@ export function useLists() {
     };
   }, []);
 
-  async function addList(title: string, mailLoopName: string, folderPath: string | null = null) {
-    return supabase
+  async function addList(title: string, mailLoopName: string, mainFolderPath: string | null) {
+    const result = await supabase
       .from("lists")
-      .insert({
-        title,
-        mail_loop_name: mailLoopName,
-        folder_path: folderPath,
-        sort_order: lists.length,
-      })
+      .insert({ title, mail_loop_name: mailLoopName, sort_order: lists.length })
       .select()
       .single();
+
+    if (result.data && mainFolderPath) {
+      const folderPath = await createSubfolder(mainFolderPath, title, result.data.id.slice(0, 6));
+      if (folderPath) {
+        await supabase.from("lists").update({ folder_path: folderPath }).eq("id", result.data.id);
+      }
+    }
+
+    return result;
   }
 
-  async function renameList(
-    id: string,
-    title: string,
-    mailLoopName: string,
-    folderPath: string | null
-  ) {
-    return supabase
-      .from("lists")
-      .update({ title, mail_loop_name: mailLoopName, folder_path: folderPath })
-      .eq("id", id);
+  async function renameList(id: string, title: string, mailLoopName: string) {
+    return supabase.from("lists").update({ title, mail_loop_name: mailLoopName }).eq("id", id);
   }
 
   async function deleteList(id: string) {

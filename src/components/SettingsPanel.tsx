@@ -1,21 +1,14 @@
 import { useState } from "react";
-import type { List } from "../lib/types";
+import type { List, AppSettings } from "../lib/types";
 import { pickFolder } from "../lib/platform";
 
 type Props = {
   lists: List[];
-  onRenameList: (
-    id: string,
-    title: string,
-    mailLoopName: string,
-    folderPath: string | null
-  ) => Promise<{ error: unknown }>;
+  settings: AppSettings | null;
+  onRenameList: (id: string, title: string, mailLoopName: string) => Promise<{ error: unknown }>;
   onDeleteList: (id: string) => void;
-  onCreateList: (
-    title: string,
-    mailLoopName: string,
-    folderPath: string | null
-  ) => Promise<{ error: unknown }>;
+  onSetMainFolderPath: (path: string) => void;
+  onCreateList: (title: string, mailLoopName: string) => Promise<{ error: unknown }>;
   onClose: () => void;
 };
 
@@ -30,26 +23,17 @@ function ListRow({
 }) {
   const [title, setTitle] = useState(list.title);
   const [mailLoopName, setMailLoopName] = useState(list.mail_loop_name);
-  const [folderPath, setFolderPath] = useState(list.folder_path);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const dirty =
-    title !== list.title ||
-    mailLoopName !== list.mail_loop_name ||
-    folderPath !== list.folder_path;
+  const dirty = title !== list.title || mailLoopName !== list.mail_loop_name;
 
   async function handleSave() {
     setError(null);
     setSaving(true);
-    const { error } = await onRename(list.id, title.trim(), mailLoopName.trim(), folderPath);
+    const { error } = await onRename(list.id, title.trim(), mailLoopName.trim());
     setSaving(false);
     if (error) setError("Bu başlık veya mail loop adı zaten kullanılıyor.");
-  }
-
-  async function handlePickFolder() {
-    const path = await pickFolder();
-    if (path) setFolderPath(path);
   }
 
   return (
@@ -68,12 +52,11 @@ function ListRow({
           placeholder="Mail loop adı"
         />
       </div>
-      <div className="settings-list-row-folder">
-        <span className="settings-folder-path">{folderPath || "Klasör seçilmedi"}</span>
-        <button type="button" onClick={handlePickFolder}>
-          Klasör Seç
-        </button>
-      </div>
+      {list.folder_path && (
+        <div className="settings-list-row-folder">
+          <span className="settings-folder-path">{list.folder_path}</span>
+        </div>
+      )}
       <div className="settings-list-row-actions">
         {dirty && (
           <button type="button" onClick={handleSave} disabled={saving}>
@@ -97,10 +80,17 @@ function ListRow({
   );
 }
 
-export function SettingsPanel({ lists, onRenameList, onDeleteList, onCreateList, onClose }: Props) {
+export function SettingsPanel({
+  lists,
+  settings,
+  onRenameList,
+  onDeleteList,
+  onSetMainFolderPath,
+  onCreateList,
+  onClose,
+}: Props) {
   const [newTitle, setNewTitle] = useState("");
   const [newMailLoopName, setNewMailLoopName] = useState("");
-  const [newFolderPath, setNewFolderPath] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
 
   async function handleCreate(e: React.FormEvent) {
@@ -109,19 +99,18 @@ export function SettingsPanel({ lists, onRenameList, onDeleteList, onCreateList,
     const t = newTitle.trim();
     const m = newMailLoopName.trim();
     if (!t || !m) return;
-    const { error } = await onCreateList(t, m, newFolderPath);
+    const { error } = await onCreateList(t, m);
     if (error) {
       setCreateError("Bu başlık veya mail loop adı zaten kullanılıyor.");
       return;
     }
     setNewTitle("");
     setNewMailLoopName("");
-    setNewFolderPath(null);
   }
 
-  async function handlePickNewFolder() {
+  async function handlePickFolder() {
     const path = await pickFolder();
-    if (path) setNewFolderPath(path);
+    if (path) onSetMainFolderPath(path);
   }
 
   return (
@@ -133,6 +122,23 @@ export function SettingsPanel({ lists, onRenameList, onDeleteList, onCreateList,
             Kapat
           </button>
         </div>
+
+        <section className="settings-section">
+          <h3>Ana Klasör</h3>
+          <p className="settings-hint">
+            Her liste, bu klasörün altında kendi adında bir alt klasör olarak
+            otomatik oluşturulur; her görev de kendi listesinin klasörü
+            altında ayrı bir klasöre sahip olur.
+          </p>
+          <div className="settings-folder-row">
+            <span className="settings-folder-path">
+              {settings?.main_folder_path || "Seçilmedi"}
+            </span>
+            <button type="button" onClick={handlePickFolder}>
+              Klasör Seç
+            </button>
+          </div>
+        </section>
 
         <section className="settings-section">
           <h3>Listeler</h3>
@@ -156,14 +162,6 @@ export function SettingsPanel({ lists, onRenameList, onDeleteList, onCreateList,
                 value={newMailLoopName}
                 onChange={(e) => setNewMailLoopName(e.currentTarget.value)}
               />
-            </div>
-            <div className="settings-list-row-folder">
-              <span className="settings-folder-path">
-                {newFolderPath || "Klasör seçilmedi (opsiyonel)"}
-              </span>
-              <button type="button" onClick={handlePickNewFolder}>
-                Klasör Seç
-              </button>
             </div>
             <button type="submit">+ Liste Ekle</button>
           </form>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import type { Todo } from "../lib/types";
+import { createSubfolder } from "../lib/folders";
 
 export function useTodos(listId: string | null) {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -45,9 +46,22 @@ export function useTodos(listId: string | null) {
     };
   }, [listId]);
 
-  async function addTodo(content: string) {
+  async function addTodo(content: string, listFolderPath?: string | null) {
     if (!listId) return;
-    return supabase.from("todos").insert({ list_id: listId, content });
+    const result = await supabase
+      .from("todos")
+      .insert({ list_id: listId, content })
+      .select()
+      .single();
+
+    if (result.data && listFolderPath) {
+      const folderPath = await createSubfolder(listFolderPath, content, result.data.id.slice(0, 6));
+      if (folderPath) {
+        await supabase.from("todos").update({ folder_path: folderPath }).eq("id", result.data.id);
+      }
+    }
+
+    return result;
   }
 
   async function toggleTodo(id: string, done: boolean) {
