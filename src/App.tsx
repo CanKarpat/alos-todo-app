@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import { useLists } from "./hooks/useLists";
@@ -7,6 +7,7 @@ import { Sidebar } from "./components/Sidebar";
 import { TodoList } from "./components/TodoList";
 import { LoginScreen } from "./components/LoginScreen";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { notify } from "./lib/platform";
 import "./App.css";
 
 function App() {
@@ -36,6 +37,32 @@ function App() {
       setActiveListId(lists[0].id);
     }
   }, [lists, activeListId]);
+
+  const listsRef = useRef(lists);
+  listsRef.current = lists;
+
+  // Arka plandayken (örn. Cowork tarafından) yeni bir todo eklenirse native bildirim göster.
+  useEffect(() => {
+    if (!session) return;
+
+    const channel = supabase
+      .channel("todos-notifications")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "todos" },
+        (payload) => {
+          if (document.visibilityState !== "hidden") return;
+          const todo = payload.new as { content: string; list_id: string };
+          const list = listsRef.current.find((l) => l.id === todo.list_id);
+          notify(list?.title ?? "Yeni görev", todo.content);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session]);
 
   if (sessionLoading) return null;
   if (!session) return <LoginScreen />;
