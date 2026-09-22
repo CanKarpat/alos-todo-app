@@ -4,6 +4,10 @@ export function isTauri(): boolean {
   return checkIsTauri();
 }
 
+export function isMobileDevice(): boolean {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
 export async function pickFolder(): Promise<string | null> {
   const { open } = await import("@tauri-apps/plugin-dialog");
   const result = await open({ directory: true, multiple: false });
