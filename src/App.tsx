@@ -1,70 +1,81 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "./lib/supabase";
+import { useLists } from "./hooks/useLists";
+import { useTodos } from "./hooks/useTodos";
+import { Sidebar } from "./components/Sidebar";
+import { TodoList } from "./components/TodoList";
+import { LoginScreen } from "./components/LoginScreen";
+import { SettingsPanel } from "./components/SettingsPanel";
 import "./App.css";
 
-type Todo = {
-  id: string;
-  content: string;
-  done: boolean;
-};
-
-const initialTodos: Todo[] = [
-  { id: "1", content: "Tauri + React iskeletini doğrula", done: true },
-  { id: "2", content: "Supabase şemasını bağla", done: false },
-];
-
 function App() {
-  const [todos, setTodos] = useState<Todo[]>(initialTodos);
-  const [draft, setDraft] = useState("");
+  const [session, setSession] = useState<Session | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [activeListId, setActiveListId] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  function toggleTodo(id: string) {
-    setTodos((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t))
-    );
-  }
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setSessionLoading(false);
+    });
 
-  function addTodo(e: React.FormEvent) {
-    e.preventDefault();
-    const content = draft.trim();
-    if (!content) return;
-    setTodos((prev) => [...prev, { id: crypto.randomUUID(), content, done: false }]);
-    setDraft("");
-  }
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+
+    return () => subscription.subscription.unsubscribe();
+  }, []);
+
+  const { lists, addList, renameList, deleteList } = useLists();
+  const { todos, addTodo, toggleTodo } = useTodos(activeListId);
+
+  useEffect(() => {
+    if (!activeListId && lists.length > 0) {
+      setActiveListId(lists[0].id);
+    }
+  }, [lists, activeListId]);
+
+  if (sessionLoading) return null;
+  if (!session) return <LoginScreen />;
+
+  const activeList = lists.find((l) => l.id === activeListId);
 
   return (
     <div className="app">
-      <aside className="sidebar">
-        <div className="sidebar-title">Listeler</div>
-        <div className="list-item list-item-active">Genel</div>
-      </aside>
+      <Sidebar
+        lists={lists}
+        activeListId={activeListId}
+        onSelect={setActiveListId}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
 
-      <main className="content">
-        <h1 className="list-heading">Genel</h1>
+      {activeList ? (
+        <TodoList
+          listTitle={activeList.title}
+          todos={todos}
+          onToggle={toggleTodo}
+          onAdd={addTodo}
+        />
+      ) : (
+        <main className="content">
+          <p className="empty-state">Henüz liste yok.</p>
+        </main>
+      )}
 
-        <ul className="todo-list">
-          {todos.map((todo) => (
-            <li key={todo.id} className="todo-item">
-              <input
-                type="checkbox"
-                checked={todo.done}
-                onChange={() => toggleTodo(todo.id)}
-              />
-              <span className={todo.done ? "todo-content done" : "todo-content"}>
-                {todo.content}
-              </span>
-            </li>
-          ))}
-        </ul>
-
-        <form className="add-todo" onSubmit={addTodo}>
-          <input
-            type="text"
-            placeholder="Yeni görev ekle..."
-            value={draft}
-            onChange={(e) => setDraft(e.currentTarget.value)}
-          />
-          <button type="submit">Ekle</button>
-        </form>
-      </main>
+      {settingsOpen && (
+        <SettingsPanel
+          lists={lists}
+          onRenameList={renameList}
+          onDeleteList={(id) => {
+            deleteList(id);
+            if (id === activeListId) setActiveListId(null);
+          }}
+          onCreateList={addList}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </div>
   );
 }
