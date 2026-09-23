@@ -4,6 +4,7 @@ const RELEASES_API = "https://api.github.com/repos/CanKarpat/alos-todo-app/relea
 
 export function DesktopDownloadPage() {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [guideUrl, setGuideUrl] = useState<string | null>(null);
   const [version, setVersion] = useState<string | null>(null);
 
   useEffect(() => {
@@ -11,10 +12,12 @@ export function DesktopDownloadPage() {
       .then((res) => res.json())
       .then((release) => {
         const dmg = release.assets?.find((a: { name: string }) => a.name.endsWith(".dmg"));
+        const guide = release.assets?.find((a: { name: string }) => a.name === "KULLANIM.md");
         if (dmg) {
           setDownloadUrl(dmg.browser_download_url);
           setVersion(release.tag_name);
         }
+        if (guide) setGuideUrl(guide.browser_download_url);
       })
       .catch(() => {});
   }, []);
@@ -62,6 +65,13 @@ export function DesktopDownloadPage() {
             </li>
           </ol>
         </div>
+
+        {guideUrl && (
+          <p className="download-hint">
+            <a href={guideUrl}>Kullanım kılavuzunu indir</a> — uygulamanın nasıl
+            kullanılacağı adım adım anlatılıyor.
+          </p>
+        )}
 
         <p className="download-hint">
           Telefonundan bu sayfayı ziyaret edip "Ana Ekrana Ekle" ile mobil
