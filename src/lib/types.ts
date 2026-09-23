@@ -21,7 +21,7 @@ export type Todo = {
 };
 
 export type AppSettings = {
-  id: true;
+  user_id: string;
   main_folder_path: string | null;
   updated_at: string;
 };

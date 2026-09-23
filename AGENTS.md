@@ -5,8 +5,16 @@ Bu dosya, Alos ToDo uygulaması ile Cowork ajanı (Gmail erişimi olan bir Claud
 ## Bağlantı
 
 - `SUPABASE_URL`: `https://krajvamaaaurwqsrrhgx.supabase.co`
-- `SUPABASE_SECRET_KEY`: Cowork'ün kendi yerel ortamında tutulur (bu repoya asla girmez). RLS'i bypass eden service-role anahtarı.
-- Sabit `user_id`: `b5ee4ee9-a932-4625-8849-336054b642a4` — Cowork secret key ile yazdığında `auth.uid()` context'i olmadığı için, `lists`/`todos` satırlarına bu UUID'yi **elle** `user_id` olarak set etmesi gerekir.
+- `SUPABASE_SECRET_KEY`: Cowork'ün kendi yerel ortamında tutulur (bu repoya asla girmez). RLS'i bypass eden service-role anahtarı — proje genelinde tek bir anahtar, tüm kullanıcıların verisine erişebilir.
+- Uygulama çok kullanıcılı: her kişinin kendi Supabase Auth hesabı ve kendi `user_id`'si var. Cowork, secret key ile yazdığında `auth.uid()` context'i olmadığı için, hangi kişi için işlem yapıyorsa **o kişinin `user_id`'sini** `lists`/`todos`/`app_settings` satırlarına elle set etmesi gerekir. Aşağıdaki SQL örneklerinde `$user_id` bu şekilde, işlenen kişiye göre değişir.
+
+**Bilinen kullanıcılar** (Supabase Studio → Authentication → Users'dan `user_id` alınır, buraya eklenir):
+
+| Kişi | user_id |
+|---|---|
+| Can (hesap sahibi) | `b5ee4ee9-a932-4625-8849-336054b642a4` |
+
+Yeni bir kişi eklendiğinde: (1) hesap sahibi Supabase Studio'dan o kişi için bir Auth kullanıcısı oluşturur, (2) oluşan `user_id` bu tabloya eklenir, (3) o kişinin hangi Gmail loop'larının/maillerinin hangi `user_id`'ye ait olduğunu Cowork bilir hale gelir (örn. birden fazla kişinin mailini tek Cowork oturumu işliyorsa, kişiyi mail adresinden/bağlamdan ayırt eder).
 
 Şema kaynağı: `supabase/migrations/*.sql` (kronolojik sırayla uygula/oku). Aşağıdaki özet, güncel durumu yansıtır ama migration dosyaları asıl doğruluk kaynağıdır.
 
@@ -17,8 +25,9 @@ Cowork, zamanlanmış (örn. her 10-15 dakikada bir) çalışan bir görev olara
 ## Şema özeti
 
 ```
-app_settings (tek satır, id her zaman true)
-  main_folder_path text   -- kullanıcının masaüstünde seçtiği ana klasör
+app_settings (kullanıcı başına bir satır)
+  user_id uuid (primary key)
+  main_folder_path text   -- o kullanıcının masaüstünde seçtiği ana klasör
 
 lists
   id uuid
@@ -47,18 +56,18 @@ Kullanıcı önceden liste oluşturmuyor — **Cowork mailleri kendi anlayışı
 4. **Eşleşen liste yoksa yeni bir tane aç**:
    ```sql
    insert into lists (title, mail_loop_name, user_id, sort_order)
-   values ($1, $1, 'b5ee4ee9-a932-4625-8849-336054b642a4',
-           (select coalesce(max(sort_order), -1) + 1 from lists))
+   values ($1, $1, $user_id,
+           (select coalesce(max(sort_order), -1) + 1 from lists where user_id = $user_id))
    on conflict (user_id, mail_loop_name) do nothing
    returning id;
    ```
-   `$1` = mailden çıkardığın temiz konu başlığı (`title` ve `mail_loop_name` aynı değer olabilir). Satır dönmezse (conflict oldu, yani aslında zaten varmış) aynı `mail_loop_name` ile `select id from lists where ...` yaparak mevcut satırı al.
-   - `app_settings.main_folder_path` doluysa, listenin klasörünü de **sen** oluştur (uygulama sadece kendi arayüzünden açılan listeler için bunu yapıyor): `<main_folder_path>/<sanitize(title)> - <id'nin ilk 6 hex karakteri>` yolunda klasör aç, `lists.folder_path` alanına yaz.
+   `$1` = mailden çıkardığın temiz konu başlığı (`title` ve `mail_loop_name` aynı değer olabilir). `$user_id` = bu mailin ait olduğu kişinin `user_id`'si (bkz. Bağlantı bölümündeki tablo). Satır dönmezse (conflict oldu, yani aslında zaten varmış) aynı `mail_loop_name` + `user_id` ile `select id from lists where ...` yaparak mevcut satırı al.
+   - O kişinin `app_settings.main_folder_path` (`where user_id = $user_id`) doluysa, listenin klasörünü de **sen** oluştur (uygulama sadece kendi arayüzünden açılan listeler için bunu yapıyor): `<main_folder_path>/<sanitize(title)> - <id'nin ilk 6 hex karakteri>` yolunda klasör aç, `lists.folder_path` alanına yaz.
 5. Bu listeyi (yeni veya eşleşen) artık o konudaki gelecek mailler için de "izlemede" say — aynı `mail_loop_name`'e bir daha eşleşen her mail bu listeye todo olarak eklenmeye devam eder.
 6. Idempotent insert yap (aynı mail için ikinci kayıt oluşmasın):
    ```sql
    insert into todos (list_id, content, source_email_id, user_id)
-   values ($1, $2, $3, 'b5ee4ee9-a932-4625-8849-336054b642a4')
+   values ($1, $2, $3, $user_id)
    on conflict (list_id, source_email_id) where source_email_id is not null
    do nothing;
    ```
@@ -82,7 +91,8 @@ Kullanıcı önceden liste oluşturmuyor — **Cowork mailleri kendi anlayışı
 
 ## Kural 3 — Ne yapmaman gerekiyor
 
-- `app_settings.main_folder_path`'i Cowork değiştirmemeli — bu sadece kullanıcının masaüstü Ayarlar ekranından değiştirdiği bir alan.
+- `app_settings.main_folder_path`'i Cowork değiştirmemeli — bu sadece ilgili kişinin kendi masaüstü Ayarlar ekranından değiştirdiği bir alan.
+- Bir kişinin verisini başka bir kişinin `user_id`'siyle karıştırmamak kritik — her zaman doğru kişinin `user_id`'sini kullan (bkz. Bağlantı bölümündeki tablo).
 - Uygulamadan elle eklenen görevleri (`source_email_id is null`) tamamlanmış işaretleme, silme ya da içeriğini değiştirme — bunlar sadece kullanıcının kendi checklist'i.
 - Aynı konudaki mailler için tekrar tekrar yeni liste açma — önce mevcut listelerle eşleşme dene (Kural 1, adım 3), sadece gerçekten yeni bir konu olduğuna eminsen yeni liste aç.
 - Bu dosyanın dışında bir API/endpoint yok; her şey doğrudan Postgres üzerinden.

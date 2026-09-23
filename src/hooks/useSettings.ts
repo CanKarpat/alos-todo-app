@@ -10,12 +10,13 @@ export function useSettings() {
     let active = true;
 
     function fetchSettings() {
+      // RLS zaten sadece giriş yapan kullanıcının satırını döndürüyor.
       supabase
         .from("app_settings")
         .select("*")
-        .single()
+        .maybeSingle()
         .then(({ data }) => {
-          if (active && data) setSettings(data);
+          if (active) setSettings(data);
           setLoading(false);
         });
     }
@@ -38,7 +39,11 @@ export function useSettings() {
   }, []);
 
   async function setMainFolderPath(path: string) {
-    return supabase.from("app_settings").update({ main_folder_path: path }).eq("id", true);
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return { error: new Error("Oturum yok") };
+    return supabase
+      .from("app_settings")
+      .upsert({ user_id: userData.user.id, main_folder_path: path });
   }
 
   return { settings, loading, setMainFolderPath };
