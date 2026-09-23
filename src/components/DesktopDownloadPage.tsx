@@ -12,7 +12,9 @@ export function DesktopDownloadPage() {
       .then((res) => res.json())
       .then((release) => {
         const dmg = release.assets?.find((a: { name: string }) => a.name.endsWith(".dmg"));
-        const guide = release.assets?.find((a: { name: string }) => a.name === "KULLANIM.md");
+        const guide =
+          release.assets?.find((a: { name: string }) => a.name === "KULLANIM.pdf") ??
+          release.assets?.find((a: { name: string }) => a.name === "KULLANIM.md");
         if (dmg) {
           setDownloadUrl(dmg.browser_download_url);
           setVersion(release.tag_name);
