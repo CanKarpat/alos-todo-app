@@ -37,4 +37,12 @@ Bu üçü de sadece build sırasında kullanılır; private key ve parolası hi�
 
 ## Apple code-signing
 
-Kişisel kullanım için Apple Developer ID notarization atlanıyor. İlk açılışta macOS "geliştirici doğrulanamadı" uyarısı verebilir — uygulama ikonuna sağ tıklayıp "Aç" seçmek yeterli. Bu, updater'ın imza kontrolünü etkilemez (o ayrı, `tauri signer` ile yapılan bir imza).
+Kişisel kullanım için Apple Developer ID notarization atlanıyor. Bunun sonucu olarak indirilen `.dmg`/`.app` için macOS Gatekeeper **"hasar görmüş, açılamıyor"** uyarısı verir (dosya gerçekten bozuk değil — bu, imzasız/notarize edilmemiş yazılımlar için Ventura/Sonoma sonrası standart davranış; eski "geliştirici doğrulanamadı → sağ tık → Aç" yöntemi bu mesaj için işe yaramıyor). Çözüm, karantina özniteliğini elle kaldırmak:
+
+```bash
+xattr -cr ~/Downloads/Alos*.dmg
+# Applications'a kurduktan sonra hâlâ uyarı verirse:
+xattr -cr /Applications/Alos.app
+```
+
+Bu, updater'ın imza kontrolünü etkilemez (o ayrı, `tauri signer` ile yapılan bir imza).

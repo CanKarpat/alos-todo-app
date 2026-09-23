@@ -553,6 +553,16 @@ body {
   margin: 0;
 }
 
+.download-steps code {
+  display: inline-block;
+  margin: 4px 0;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background-color: var(--color-border);
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+}
+
 .download-hint {
   margin-top: 24px;
   font-size: 13px;

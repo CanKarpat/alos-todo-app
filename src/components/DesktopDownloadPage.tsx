@@ -45,12 +45,20 @@ export function DesktopDownloadPage() {
         <div className="download-steps">
           <h2>Kurulum</h2>
           <ol>
-            <li>İndirilen .dmg dosyasını aç.</li>
+            <li>
+              İndirilen .dmg dosyasına çift tıkla. macOS "hasar görmüş,
+              açılamıyor" uyarısı verirse (imzasız uygulamalar için normal,
+              dosya gerçekten bozuk değil) Terminal'i aç ve şunu çalıştır:
+              <br />
+              <code>xattr -cr ~/Downloads/Alos*.dmg</code>
+              <br />
+              sonra dosyaya tekrar çift tıkla.
+            </li>
             <li>Alos ikonunu Applications klasörüne sürükle.</li>
             <li>
-              Applications'tan Alos'u aç. İlk açılışta macOS "geliştirici
-              doğrulanamadı" uyarısı verirse, uygulama ikonuna sağ tıklayıp
-              "Aç"ı seç.
+              Applications'tan Alos'u aç. Aynı uyarı orada da çıkarsa:
+              <br />
+              <code>xattr -cr /Applications/Alos.app</code>
             </li>
           </ol>
         </div>
