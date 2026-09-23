@@ -14,16 +14,22 @@ export async function pickFolder(): Promise<string | null> {
   return typeof result === "string" ? result : null;
 }
 
-export async function checkForUpdates(): Promise<void> {
+export async function checkForUpdates(options: { silent?: boolean } = {}): Promise<void> {
+  const { silent = true } = options;
   if (!isTauri()) return;
 
   try {
     const { check } = await import("@tauri-apps/plugin-updater");
-    const { ask } = await import("@tauri-apps/plugin-dialog");
+    const { ask, message } = await import("@tauri-apps/plugin-dialog");
     const { relaunch } = await import("@tauri-apps/plugin-process");
 
     const update = await check();
-    if (!update) return;
+    if (!update) {
+      if (!silent) {
+        await message("Alos güncel, yeni bir sürüm yok.", { title: "Güncelleme" });
+      }
+      return;
+    }
 
     const shouldInstall = await ask(
       `Alos ${update.version} sürümü hazır. Şimdi indirip kurmak ister misin?`,
@@ -34,8 +40,13 @@ export async function checkForUpdates(): Promise<void> {
     await update.downloadAndInstall();
     await relaunch();
   } catch {
-    // Henüz yayınlanmış bir sürüm yoksa (veya ağ sorunu varsa) sessizce yut —
-    // güncelleme kontrolü arka plan işi, kullanıcıya hata göstermeye gerek yok.
+    // Açılıştaki sessiz kontrolde hatayı yut. Elle tetiklenen kontrolde kullanıcıya haber ver.
+    if (!silent) {
+      const { message } = await import("@tauri-apps/plugin-dialog");
+      await message("Güncelleme kontrol edilemedi. İnternet bağlantını kontrol et.", {
+        title: "Hata",
+      });
+    }
   }
 }
 

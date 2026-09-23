@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { List, AppSettings } from "../lib/types";
-import { pickFolder } from "../lib/platform";
+import { pickFolder, checkForUpdates } from "../lib/platform";
 
 type Props = {
   lists: List[];
@@ -166,6 +166,17 @@ export function SettingsPanel({
             <button type="submit">+ Liste Ekle</button>
           </form>
           {createError && <p className="sidebar-create-error">{createError}</p>}
+        </section>
+
+        <section className="settings-section">
+          <h3>Uygulama</h3>
+          <button
+            type="button"
+            className="settings-check-updates-button"
+            onClick={() => checkForUpdates({ silent: false })}
+          >
+            Güncellemeleri Kontrol Et
+          </button>
         </section>
       </div>
     </div>
