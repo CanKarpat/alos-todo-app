@@ -1,4 +1,24 @@
+import { useEffect, useState } from "react";
+
+const RELEASES_API = "https://api.github.com/repos/CanKarpat/alos-todo-app/releases/latest";
+
 export function DesktopDownloadPage() {
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [version, setVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(RELEASES_API)
+      .then((res) => res.json())
+      .then((release) => {
+        const dmg = release.assets?.find((a: { name: string }) => a.name.endsWith(".dmg"));
+        if (dmg) {
+          setDownloadUrl(dmg.browser_download_url);
+          setVersion(release.tag_name);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="download-page">
       <div className="download-card">
@@ -8,13 +28,19 @@ export function DesktopDownloadPage() {
           native bir uygulama olarak kullanabilirsin.
         </p>
 
-        <a
-          className="download-button download-button-disabled"
-          href="#"
-          onClick={(e) => e.preventDefault()}
-        >
-          macOS için indir (yakında)
-        </a>
+        {downloadUrl ? (
+          <a className="download-button" href={downloadUrl}>
+            macOS için indir {version && `(${version})`}
+          </a>
+        ) : (
+          <a
+            className="download-button download-button-disabled"
+            href="#"
+            onClick={(e) => e.preventDefault()}
+          >
+            macOS için indir (yükleniyor...)
+          </a>
+        )}
 
         <div className="download-steps">
           <h2>Kurulum</h2>
