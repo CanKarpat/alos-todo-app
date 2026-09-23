@@ -12,7 +12,8 @@ Bu dosya, Alos ToDo uygulaması ile Cowork ajanı (Gmail erişimi olan bir Claud
 
 | Kişi | user_id |
 |---|---|
-| Can (hesap sahibi) | `b5ee4ee9-a932-4625-8849-336054b642a4` |
+| Can (hesap sahibi) | `8d06686e-efaa-432e-998c-aa70605bb2ab` |
+| Yeni kullanıcı | `b5ee4ee9-a932-4625-8849-336054b642a4` |
 
 Yeni bir kişi eklendiğinde: (1) hesap sahibi Supabase Studio'dan o kişi için bir Auth kullanıcısı oluşturur, (2) oluşan `user_id` bu tabloya eklenir, (3) o kişinin hangi Gmail loop'larının/maillerinin hangi `user_id`'ye ait olduğunu Cowork bilir hale gelir (örn. birden fazla kişinin mailini tek Cowork oturumu işliyorsa, kişiyi mail adresinden/bağlamdan ayırt eder).
 
