@@ -18,6 +18,8 @@ jobs:
           node-version: 20
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
 
       - name: Install frontend dependencies
         run: npm ci
@@ -35,3 +37,4 @@ jobs:
           releaseBody: "Otomatik güncelleme sürümü."
           releaseDraft: false
           prerelease: false
+          args: --target aarch64-apple-darwin
