@@ -8,15 +8,33 @@ Cowork'ün Gmail erişimi tamamen ayrı, kendi entegrasyonudur — Alos'un bunda
 
 **Standart yöntem — her kişi kendi Alos hesabıyla (önerilen):**
 
-Her kişinin Cowork'ü, o kişinin **zaten sahip olduğu Alos giriş bilgileriyle** (email + parola — uygulamaya giriş için kullandığı aynı bilgiler, Gmail'le hiçbir ilgisi yok) arka planda, görünmez bir API çağrısıyla giriş yapar:
+Bunun için özel bir bağlayıcı/MCP sunucusu kurmana **gerek yok** — Cowork'ün (Claude Code) zaten varsayılan olarak sahip olduğu terminal/`curl` erişimi yeterli. İki adım:
 
-```
-POST {SUPABASE_URL}/auth/v1/token?grant_type=password
-Header: apikey: {SUPABASE_PUBLISHABLE_KEY}
-Body: { "email": "...", "password": "..." }
+**1. Giriş yap** (kişinin zaten sahip olduğu Alos giriş bilgileriyle — email + parola, Gmail'le hiçbir ilgisi yok):
+
+```bash
+curl -s -X POST "https://krajvamaaaurwqsrrhgx.supabase.co/auth/v1/token?grant_type=password" \
+  -H "apikey: {SUPABASE_PUBLISHABLE_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"KISININ_EMAILI","password":"KISININ_PAROLASI"}'
 ```
 
-Dönen `access_token`'ı sonraki her istekte `Authorization: Bearer {access_token}` başlığıyla kullan. Bu girişten sonra yaptığın her insert/update **otomatik olarak o kişiye ait sayılır** (`user_id` sütunu `auth.uid()`'den kendiliğinden dolar) — aşağıdaki SQL örneklerinde ayrıca `user_id` belirtmene gerek yok, veritabanı zaten hangi kişi olarak bağlandığını biliyor.
+Dönen JSON içindeki `access_token`'ı al.
+
+**2. Bu token'la okuma/yazma yap** (aşağıdaki örnek bir liste oluşturuyor):
+
+```bash
+curl -s -X POST "https://krajvamaaaurwqsrrhgx.supabase.co/rest/v1/lists" \
+  -H "apikey: {SUPABASE_PUBLISHABLE_KEY}" \
+  -H "Authorization: Bearer {ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -H "Prefer: return=representation" \
+  -d '{"title":"...","mail_loop_name":"..."}'
+```
+
+Aynı desenle `todos` tablosuna da `POST https://.../rest/v1/todos`, güncelleme için `PATCH https://.../rest/v1/todos?id=eq.<id>`, okuma için `GET https://.../rest/v1/lists?select=*` şeklinde istek atılır (standart PostgREST arayüzü — Supabase'in kendi REST API'si).
+
+Bu girişten sonra yaptığın her insert/update **otomatik olarak o kişiye ait sayılır** (`user_id` sütunu `auth.uid()`'den kendiliğinden dolar) — Kural 1-2'deki SQL örneklerinde (ki bu curl istekleriyle birebir aynı işi yapar) ayrıca `user_id` belirtmene gerek yok.
 
 - `SUPABASE_URL`: `https://krajvamaaaurwqsrrhgx.supabase.co`
 - `SUPABASE_PUBLISHABLE_KEY`: hassas değil, uygulamanın `.env.example`'ında da var, paylaşılabilir.
