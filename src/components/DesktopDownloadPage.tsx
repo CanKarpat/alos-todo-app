@@ -5,6 +5,7 @@ const RELEASES_API = "https://api.github.com/repos/CanKarpat/alos-todo-app/relea
 export function DesktopDownloadPage() {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [guideUrl, setGuideUrl] = useState<string | null>(null);
+  const [agentsUrl, setAgentsUrl] = useState<string | null>(null);
   const [version, setVersion] = useState<string | null>(null);
 
   useEffect(() => {
@@ -15,11 +16,13 @@ export function DesktopDownloadPage() {
         const guide =
           release.assets?.find((a: { name: string }) => a.name === "KULLANIM.pdf") ??
           release.assets?.find((a: { name: string }) => a.name === "KULLANIM.md");
+        const agents = release.assets?.find((a: { name: string }) => a.name === "AGENTS.md");
         if (dmg) {
           setDownloadUrl(dmg.browser_download_url);
           setVersion(release.tag_name);
         }
         if (guide) setGuideUrl(guide.browser_download_url);
+        if (agents) setAgentsUrl(agents.browser_download_url);
       })
       .catch(() => {});
   }, []);
@@ -72,6 +75,13 @@ export function DesktopDownloadPage() {
           <p className="download-hint">
             <a href={guideUrl}>Kullanım kılavuzunu indir</a> — uygulamanın nasıl
             kullanılacağı adım adım anlatılıyor.
+          </p>
+        )}
+
+        {agentsUrl && (
+          <p className="download-hint">
+            <a href={agentsUrl}>Cowork entegrasyon dosyasını indir (AGENTS.md)</a> —
+            kendi Cowork'ünün Alos'u kullanabilmesi için gereken kurallar.
           </p>
         )}
 

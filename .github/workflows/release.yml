@@ -42,7 +42,7 @@ jobs:
       - name: Render user guide as PDF
         run: npx --yes md-to-pdf@5 KULLANIM.md
 
-      - name: Attach user guide to the release
+      - name: Attach user guide and Cowork integration file to the release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${{ github.ref_name }}" KULLANIM.md KULLANIM.pdf --clobber
+        run: gh release upload "${{ github.ref_name }}" KULLANIM.md KULLANIM.pdf AGENTS.md --clobber
