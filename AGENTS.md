@@ -44,14 +44,9 @@ Bu yöntemle her kişinin Cowork'ü **sadece kendi verisine** yazabilir — veri
 
 **İleri seviye — hesap sahibinin isteğe bağlı kullanımı:**
 
-Tek bir Cowork oturumu birden fazla kişinin mailini aynı anda işleyecekse, `SUPABASE_SECRET_KEY` (RLS'i bypass eden service-role anahtarı) kullanılabilir. Bu anahtar **çok güçlü** (tüm kullanıcıların verisine erişir) — sadece hesap sahibinde kalmalı, başka kimseyle paylaşılmamalı. Bu yöntemi kullanırken, hangi kişi için yazıldığını belirtmek üzere `user_id`'yi elle set etmek gerekir:
+Tek bir Cowork oturumu birden fazla kişinin mailini aynı anda işleyecekse, `SUPABASE_SECRET_KEY` (RLS'i bypass eden service-role anahtarı) kullanılabilir. Bu anahtar **çok güçlü** (tüm kullanıcıların verisine erişir) — sadece hesap sahibinde kalmalı, başka kimseyle paylaşılmamalı. Bu yöntemi kullanırken, hangi kişi için yazıldığını belirtmek üzere `user_id`'yi elle set etmek gerekir; ilgili kişinin `user_id`'sini Supabase Studio → Authentication → Users'dan bul (bu dosya herkese açık paylaşılabildiği için gerçek `user_id`'ler burada listelenmiyor).
 
-| Kişi | user_id |
-|---|---|
-| Can (hesap sahibi) | `8d06686e-efaa-432e-998c-aa70605bb2ab` |
-| Yeni kullanıcı | `b5ee4ee9-a932-4625-8849-336054b642a4` |
-
-Aşağıdaki Kural 1-2'deki SQL örnekleri **standart yöntemi** (kendi hesabıyla giriş) varsayar. Secret key ile çalışıyorsan, örneklerdeki her insert'e `user_id` sütununu yukarıdaki tablodan ilgili kişinin id'siyle elle eklemen gerekir.
+Aşağıdaki Kural 1-2'deki SQL örnekleri **standart yöntemi** (kendi hesabıyla giriş) varsayar. Secret key ile çalışıyorsan, örneklerdeki her insert'e `user_id` sütununu Supabase Studio'dan bulduğun ilgili kişinin id'siyle elle eklemen gerekir.
 
 Şema kaynağı: `supabase/migrations/*.sql` (kronolojik sırayla uygula/oku). Aşağıdaki özet, güncel durumu yansıtır ama migration dosyaları asıl doğruluk kaynağıdır.
 
